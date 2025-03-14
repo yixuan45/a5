@@ -24,6 +24,7 @@ class complexGraphProject(object):
         self.k_dict = {}  # 存储节点度的字典
         self.k_division = [0, 0, 0, 0, 0]  # 存储每个度的分布，比如度默认为索引值，从1开始
         self.k_division_acc = []  # 存储度的累计概率
+        self.averShortPathList = []  # 节点间最短路径的长度分布列表
 
     def topological_graph(self, lineDict=None):
         """
@@ -347,6 +348,43 @@ class complexGraphProject(object):
 
         return dist_matrix
 
+    def pathScatter(self, averShortPathList):
+        """
+        节点间最短路径长度分布
+        :param averShortPathList: 节点间最短路径的长度分布列表
+        :return:
+        """
+        x = []
+        for index, value in enumerate(averShortPathList):
+            x.insert(index, index + 1)
+        print(x)
+        plt.scatter(
+            x,
+            averShortPathList,
+            c='#2b7cff',  # 统一使用蓝色系
+            alpha=0.6,  # 保持透明度
+            edgecolor='w',  # 白色边缘
+            linewidth=0.5,
+            label='Data Points'  # 添加图例标签
+        )
+
+        # 设置标题和坐标轴
+        plt.title('节点间最短路径长度分布', fontsize=16, pad=20)
+        plt.xlabel('最短路径长度d', fontsize=12)
+        plt.ylabel('节点间平均最短路径为d的概率', fontsize=12)
+
+        # 设置网格和坐标轴范围
+        plt.grid(True, linestyle='--', alpha=0.4)
+        plt.xlim(0, 33)
+        plt.ylim(0, 1)
+
+        # 显示图例（通过label参数自动生成）
+        plt.legend(loc='lower right')
+
+        # 优化布局
+        plt.tight_layout()
+        plt.savefig('./photo/pathScatter.png')
+
     def averPath(self, stationMatrix=None):
         """
         求解平均路径长度
@@ -370,11 +408,221 @@ class complexGraphProject(object):
             averShortPathList.append(0)
         for path_key, path_value in averShortPathDict.items():
             averShortPathList[int(path_key)] = int(path_value)
+        sum_path = sum(averShortPathList)
+        for index, value in enumerate(averShortPathList):
+            averShortPathList[index] = round(averShortPathList[index] / sum_path, 5)
+        self.pathScatter(averShortPathList=averShortPathList)
         for i_index, i in enumerate(dist_matrix):
             for j_index, j in enumerate(i[i_index:]):
                 averShortPathMatrix += j
         averShortPathMatrix = 2 / (len(dist_matrix) * (len(dist_matrix) + 1)) * averShortPathMatrix
         print(f"网络的平均路径长度为{averShortPathMatrix}")
+        return averShortPathList
+
+    def clusteringScatter(self):
+        """
+        节点间最短路径长度分布
+        :param averShortPathList: 节点间最短路径的长度分布列表
+        :return:
+        """
+        x = [1, 2, 3, 4]
+        y = [0, 0, 0, 0]
+        plt.scatter(
+            x,
+            y,
+            c='#2b7cff',  # 统一使用蓝色系
+            alpha=0.6,  # 保持透明度
+            edgecolor='w',  # 白色边缘
+            linewidth=0.5,
+            label='Data Points'  # 添加图例标签
+        )
+
+        # 设置标题和坐标轴
+        plt.title(' 网络节点集聚系数与度的关系', fontsize=16, pad=20)
+        plt.xlabel('节点度的值ｋ', fontsize=12)
+        plt.ylabel('节点集聚系数的值C(k)', fontsize=12)
+
+        # 设置网格和坐标轴范围
+        plt.grid(True, linestyle='--', alpha=0.4)
+        plt.xticks(np.arange(0, len(x) + 0.1, 1))  # 设置x轴间隔为1
+        plt.ylim(0, 1)
+
+        # 显示图例（通过label参数自动生成）
+        plt.legend(loc='lower right')
+
+        # 优化布局
+        plt.tight_layout()
+        plt.savefig('./photo/clusteringScatter.png')
+
+    def clustering_coefficient(self, stationMatrix=None):
+        """
+        求节点的平均聚集系数
+        :param stationMatrix:无向邻接矩阵
+        :return:
+        """
+        Ei_list = []  # 用于暂存一轮有哪些ki结点的索引值
+        Ci_list = []  # 用于记录ci的值
+        ki = 0
+        ei = 0
+        ci = 0
+        C = 0  # 集聚系数
+        # 先求ki:每个i节点的度数
+        for i_index, i in enumerate(stationMatrix):
+            ki = sum(i)
+            # 第二步求Ei:
+            Ei_list = []
+            for j_index, j in enumerate(i):
+                if j == 1:
+                    Ei_list.append(j_index)
+            for ei_i in range(len(Ei_list) - 1):
+                for ei_j in range(ei_i + 1, len(Ei_list)):
+                    if stationMatrix[Ei_list[ei_i]][Ei_list[ei_j]] == 1:
+                        ei += 1
+            # 第三步求ci:
+            if ki == 1:
+                ci = 0
+            else:
+                ci = 2 * ei / (ki * (ki - 1))
+            Ci_list.append(ci)
+        # 第四步求C
+        C = sum(Ci_list) / len(Ci_list)
+        # 绘制散点图
+        self.clusteringScatter()
+        print(f"集聚系数为:{C}")
+
+    def node_bcPlot(self, node_bc):
+        """
+        计算网络各节点介数大小
+        :param node_bc: 点介数所对的字典
+        :return:
+        """
+        index_list = []
+        bc_list = []
+        for index, bc in node_bc.items():
+            index_list.append(index)
+            bc_list.append(bc)
+        plt.figure(figsize=(10, 6), dpi=100)
+
+        # 绘制散点图
+        plt.scatter(index_list,
+                    bc_list,
+                    s=25,  # 点的大小
+                    c='#7F00FF',  # 紫色色号
+                    alpha=0.7,  # 透明度
+                    edgecolors='w',  # 点边缘白色
+                    linewidths=0.5  # 边缘线宽
+                    )
+
+        # 坐标轴设置
+        plt.xlim(0, len(index_list))  # x轴范围扩展留白
+        plt.ylim(0, 0.3)  # y轴范围扩展留白
+        plt.title('网络各节点介数大小')
+        plt.xlabel('节点编号', labelpad=10)
+        plt.ylabel('节点介数', labelpad=10)
+
+        # 网格设置
+        plt.grid(True,
+                 color='black',
+                 linestyle='--',
+                 linewidth=0.5,
+                 alpha=0.4)
+
+        # 显示图表
+        plt.tight_layout()
+        plt.savefig('./photo/node_bcPlot.png')
+
+    def relationship_node_bc_k(self, node_bc, k_dict):
+        """
+        用于求解节点介数和度之间的关系
+        :param node_bc:
+        :param k_dict:
+        :return:
+        """
+        print(k_dict)
+        x = []  # 存节点的度
+        y = []  # 存节点的介数
+        for index, value in node_bc.items():
+            y.append(value)
+        for index, value in k_dict.items():
+            x.append(value)
+
+        # 绘制散点图
+        plt.figure(figsize=(8, 5))
+        plt.scatter(x, y)
+
+        # 坐标轴设置
+        plt.xticks(np.arange(1, 5.1, 1))  # x轴范围扩展留白
+        plt.ylim(0, 0.3)  # y轴范围扩展留白
+        plt.title('网络节点介数和度的关系')
+        plt.xlabel('节点度的值', labelpad=10)
+        plt.ylabel('节点介数的值', labelpad=10)
+
+        plt.grid(True)
+        # 显示图表
+        plt.tight_layout()
+        plt.savefig('./photo/relationship_node_bc_k.png')
+
+    def edge_bcPlot(self, edge_bc, k_dict):
+        """
+
+        :param edge_bc: 边介数
+        :param k_dict:
+        :return:
+        """
+        pass
+
+    def betweenness(self, stationMatrix, k_dict, lineIndex_dict):
+        """
+        计算介数
+        :param stationMatrix: 地铁邻接矩阵
+        :return:
+        """
+        stationMatrix = np.array(stationMatrix)
+        """计算带介数值的点边介数并返回前20结果"""
+        # 创建无向图并计算介数
+        G = nx.from_numpy_array(stationMatrix)
+
+        # 计算点介数（结果自动包含标准化处理）
+        node_bc = nx.betweenness_centrality(G)
+        # self.node_bcPlot(node_bc=node_bc)
+
+        # self.relationship_node_bc_k(node_bc=node_bc, k_dict=k_dict)
+
+        # 计算边介数并标准化边方向
+        edge_bc = nx.edge_betweenness_centrality(G)
+        # self.edge_bcPlot(edge_bc=edge_bc, k_dict=k_dict)
+
+        # 标准化边方向（无累加操作）
+        normalized_edges = {}
+        for (u, v), value in edge_bc.items():
+            u, v = (u, v) if u < v else (v, u)
+            normalized_edges[(u, v)] = value
+
+        # 排序处理
+        sorted_nodes = sorted(node_bc.items(), key=lambda x: -x[1])[:20]
+        sorted_edges = sorted(normalized_edges.items(), key=lambda x: -x[1])[:20]
+
+        nodes_top20 = sorted_nodes
+        edges_top20 = sorted_edges
+
+        # print(k_dict)
+        print(lineIndex_dict)
+        # 打印结果
+        print("点介数Top20：")
+        for idx, (node, value) in enumerate(nodes_top20, 1):
+            for key, station_value in lineIndex_dict.items():
+                if station_value == node:
+                    print(f"{idx:2d}. 节点 {node} 节点名字 {key}: {value:.6f}")
+
+        print("\n边介数Top20：")
+        for idx, ((u, v), value) in enumerate(edges_top20, 1):
+            for key, station_value in lineIndex_dict.items():
+                if station_value == u:
+                    uname = key
+                if station_value == v:
+                    vname = key
+            print(f"{idx:2d}. 边 ({u}, {v}) 边名 ({uname},{vname}): {value:.6f}")
+        return sorted_nodes, sorted_edges
 
     def run(self):
         """程序入口"""
@@ -384,9 +632,13 @@ class complexGraphProject(object):
         # 绘制地铁拓扑图
         # self.topological_graph(lineDict=self.line_dict)
         # 求度和度的概率分布
-        # self.k_dict, self.k_division = self.k_sum(stationMatrix=self.stationMatrix, lineIndex_dict=self.lineIndex_dict)
+        self.k_dict, self.k_division = self.k_sum(stationMatrix=self.stationMatrix, lineIndex_dict=self.lineIndex_dict)
         # 求平均路径长度
-        self.averPath(stationMatrix=self.stationMatrix)
+        # self.averShortPathList = self.averPath(stationMatrix=self.stationMatrix)
+        # 计算集聚系数
+        # self.clustering_coefficient(stationMatrix=self.stationMatrix)
+        # 计算介数
+        self.betweenness(stationMatrix=self.stationMatrix, k_dict=self.k_dict, lineIndex_dict=self.lineIndex_dict)
 
 
 if __name__ == '__main__':
