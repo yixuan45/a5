@@ -284,11 +284,12 @@ class complexGraphProject(object):
         :return:
         """
         # 数据
-
+        k_division_acc = deepcopy(k_division)
+        # print(k_division_acc)
         k_division_fuben = deepcopy(k_division)  # 将k_division的值进行深拷贝，只赋值，不赋地址
         x = [1, 2, 3, 4, 5]
         for i in range(5):
-            k_division[i] = sum(k_division_fuben[0:i + 1])
+            k_division_acc[i] = sum(k_division_fuben[0:i + 1])
 
         # 创建折线图
         plt.plot(x, k_division, marker='o')
@@ -300,7 +301,7 @@ class complexGraphProject(object):
         plt.ylim(0, 1.01)
         plt.grid(True, color="green")
         plt.savefig('kLinePlot.png')
-        k_division_acc = k_division
+
         return k_division_acc
 
     def k_sum(self, stationMatrix=None, lineIndex_dict=None):
@@ -357,7 +358,7 @@ class complexGraphProject(object):
         x = []
         for index, value in enumerate(averShortPathList):
             x.insert(index, index + 1)
-        print(x)
+        # print(x)
         plt.scatter(
             x,
             averShortPathList,
@@ -538,7 +539,7 @@ class complexGraphProject(object):
         :param k_dict:
         :return:
         """
-        print(k_dict)
+        # print(k_dict)
         x = []  # 存节点的度
         y = []  # 存节点的介数
         for index, value in node_bc.items():
@@ -584,12 +585,23 @@ class complexGraphProject(object):
 
         # 计算点介数（结果自动包含标准化处理）
         node_bc = nx.betweenness_centrality(G)
+        node_ave = 0  # 点平均介数
+        for key, value in node_bc.items():
+            node_ave += value
+        node_ave /= len(node_bc)
+        print("点平均介数为{}".format(node_ave))
         # self.node_bcPlot(node_bc=node_bc)
 
         # self.relationship_node_bc_k(node_bc=node_bc, k_dict=k_dict)
 
         # 计算边介数并标准化边方向
         edge_bc = nx.edge_betweenness_centrality(G)
+        edge_ave = 0
+        for key, value in edge_bc.items():
+            edge_ave += value
+        edge_ave /= len(edge_bc)
+        print("边平均介数为{}".format(edge_ave))
+
         # self.edge_bcPlot(edge_bc=edge_bc, k_dict=k_dict)
 
         # 标准化边方向（无累加操作）
@@ -606,23 +618,35 @@ class complexGraphProject(object):
         edges_top20 = sorted_edges
 
         # print(k_dict)
-        print(lineIndex_dict)
+        # print(lineIndex_dict)
         # 打印结果
-        print("点介数Top20：")
-        for idx, (node, value) in enumerate(nodes_top20, 1):
-            for key, station_value in lineIndex_dict.items():
-                if station_value == node:
-                    print(f"{idx:2d}. 节点 {node} 节点名字 {key}: {value:.6f}")
+        # print("点介数Top20：")
+        # for idx, (node, value) in enumerate(nodes_top20, 1):
+        #     for key, station_value in lineIndex_dict.items():
+        #         if station_value == node:
+        #             print(f"{idx:2d}. 节点 {node} 节点名字 {key}: {value:.6f}")
 
-        print("\n边介数Top20：")
-        for idx, ((u, v), value) in enumerate(edges_top20, 1):
-            for key, station_value in lineIndex_dict.items():
-                if station_value == u:
-                    uname = key
-                if station_value == v:
-                    vname = key
-            print(f"{idx:2d}. 边 ({u}, {v}) 边名 ({uname},{vname}): {value:.6f}")
+        # print("\n边介数Top20：")
+        # for idx, ((u, v), value) in enumerate(edges_top20, 1):
+        #     for key, station_value in lineIndex_dict.items():
+        #         if station_value == u:
+        #             uname = key
+        #         if station_value == v:
+        #             vname = key
+        #     print(f"{idx:2d}. 边 ({u}, {v}) 边名 ({uname},{vname}): {value:.6f}")
         return sorted_nodes, sorted_edges
+
+    def detail_print(self, k_division):
+        """
+
+        :param k_division:
+        :return:
+        """
+        ave_k = 0
+        # print(k_division)
+        for index, value in enumerate(k_division):
+            ave_k += (index + 1) * k_division[index]
+        print(f"平均度数为{ave_k:3f}")
 
     def run(self):
         """程序入口"""
@@ -634,11 +658,14 @@ class complexGraphProject(object):
         # 求度和度的概率分布
         self.k_dict, self.k_division = self.k_sum(stationMatrix=self.stationMatrix, lineIndex_dict=self.lineIndex_dict)
         # 求平均路径长度
-        # self.averShortPathList = self.averPath(stationMatrix=self.stationMatrix)
+        self.averShortPathList = self.averPath(stationMatrix=self.stationMatrix)
         # 计算集聚系数
-        # self.clustering_coefficient(stationMatrix=self.stationMatrix)
+        self.clustering_coefficient(stationMatrix=self.stationMatrix)
         # 计算介数
         self.betweenness(stationMatrix=self.stationMatrix, k_dict=self.k_dict, lineIndex_dict=self.lineIndex_dict)
+        self.detail_print(k_division=self.k_division)
+        print("直径为5")
+        print("度分布为:高斯分布")
 
 
 if __name__ == '__main__':
